@@ -6,7 +6,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let accountsData = [];
 let activeFilter = "all";
 let searchTerm = "";
-const openedProfiles = new Set(); // Remember expanded accordion state
+const openedProfiles = new Set();
 
 window.openModal = function (id) {
   const m = document.getElementById(id);
@@ -69,7 +69,8 @@ async function fetchAccountsAndProfiles() {
           pin,
           expiry_date,
           has_warranty,
-          notes
+          notes,
+          tag
         )
       `)
       .order("created_at", { ascending: false });
@@ -151,15 +152,19 @@ function render() {
   accountsData.forEach((acc) => {
     const filteredProfiles = acc.profiles.filter((p) => {
       const days = calculateDaysRemaining(p.expiry_date);
+      const tag = (p.tag || "none").toLowerCase();
 
       const matchSearch =
         acc.email.toLowerCase().includes(searchTerm) ||
         p.customer_name.toLowerCase().includes(searchTerm) ||
         p.profile_name.toLowerCase().includes(searchTerm) ||
-        (p.notes && p.notes.toLowerCase().includes(searchTerm));
+        (p.notes && p.notes.toLowerCase().includes(searchTerm)) ||
+        tag.includes(searchTerm);
 
       if (!matchSearch) return false;
 
+      if (activeFilter === "priority") return tag === "priority";
+      if (activeFilter === "blacklist") return tag === "blacklist";
       if (activeFilter === "soon") return days >= 0 && days <= 3;
       if (activeFilter === "expired") return days < 0;
       if (activeFilter === "warranty") return p.has_warranty === true;
@@ -203,14 +208,22 @@ function render() {
                   const days = calculateDaysRemaining(p.expiry_date);
                   const badge = getBadgeDetails(days);
                   const isOpen = openedProfiles.has(p.id);
+                  const tag = p.tag || "none";
+
+                  let tagHtml = "";
+                  if (tag === "priority") {
+                    tagHtml = `<span class="tag-badge tag-priority">[PRIORITY]</span>`;
+                  } else if (tag === "blacklist") {
+                    tagHtml = `<span class="tag-badge tag-blacklist">[BLACKLIST]</span>`;
+                  }
 
                   return `
                     <div class="profile-item ${isOpen ? "open" : ""}" id="profile-item-${p.id}">
-                      <!-- Header/Summary Clickable -->
                       <div class="profile-summary" onclick="window.toggleProfileAccordion('${p.id}')">
                         <div class="profile-left">
                           <span class="expand-indicator">▶</span>
                           <span class="profile-name-text">${p.profile_name}</span>
+                          ${tagHtml}
                         </div>
                         <div class="profile-right">
                           <span class="expiry-date-text">${p.expiry_date}</span>
@@ -218,7 +231,6 @@ function render() {
                         </div>
                       </div>
 
-                      <!-- Expanded Details -->
                       <div class="profile-details">
                         <div class="info-grid">
                           <div class="info-item">
@@ -230,12 +242,24 @@ function render() {
                             <span class="info-value">${p.pin || "—"}</span>
                           </div>
                           <div class="info-item">
+                            <span class="info-label">Status Tag</span>
+                            <span class="info-value">
+                              ${
+                                tag === "priority"
+                                  ? `<span style="color:#fcd34d; font-weight:700;">Priority Household</span>`
+                                  : tag === "blacklist"
+                                  ? `<span style="color:#f87171; font-weight:700;">Blacklisted</span>`
+                                  : `<span style="color:#888;">Normal</span>`
+                              }
+                            </span>
+                          </div>
+                          <div class="info-item">
                             <span class="info-label">Warranty</span>
                             <span class="info-value">
                               ${p.has_warranty ? `<span class="warranty-tag">Active</span>` : `<span style="color:#777;">No Warranty</span>`}
                             </span>
                           </div>
-                          <div class="info-item">
+                          <div class="info-item" style="grid-column: span 2;">
                             <span class="info-label">Notes / Catatan</span>
                             <span class="info-value ${!p.notes ? "empty" : ""}">${p.notes || "None"}</span>
                           </div>
@@ -296,6 +320,7 @@ window.openAddProfileModal = function (accountId, isFull) {
   document.getElementById("profileForm").reset();
   document.getElementById("profileId").value = "";
   document.getElementById("profileAccountId").value = accountId;
+  document.getElementById("profileTag").value = "none";
   document.getElementById("profileModalTitle").innerText = "Add Customer Profile";
 
   const nextMonth = new Date();
@@ -321,6 +346,7 @@ window.openEditProfileModal = function (profileId) {
   document.getElementById("profilePin").value = profileToEdit.pin || "";
   document.getElementById("expiryDate").value = profileToEdit.expiry_date;
   document.getElementById("profileNotes").value = profileToEdit.notes || "";
+  document.getElementById("profileTag").value = profileToEdit.tag || "none";
   document.getElementById("hasWarranty").checked = profileToEdit.has_warranty;
 
   document.getElementById("profileModalTitle").innerText = "Edit Customer Profile";
@@ -336,6 +362,7 @@ async function handleProfileSubmit(e) {
   const pin = document.getElementById("profilePin").value.trim();
   const expiry_date = document.getElementById("expiryDate").value;
   const notes = document.getElementById("profileNotes").value.trim();
+  const tag = document.getElementById("profileTag").value;
   const has_warranty = document.getElementById("hasWarranty").checked;
 
   const payload = {
@@ -345,14 +372,14 @@ async function handleProfileSubmit(e) {
     pin,
     expiry_date,
     notes,
+    tag,
     has_warranty,
   };
 
   let res;
   if (id) {
-    // Update existing profile tanpa buang data lain
     res = await supabaseClient.from("profiles").update(payload).eq("id", id);
-    if (!res.error) openedProfiles.add(id); // Pastikan bila update, kad kekal terbuka
+    if (!res.error) openedProfiles.add(id);
   } else {
     res = await supabaseClient.from("profiles").insert([payload]);
   }
@@ -379,7 +406,7 @@ window.renewProfile = async function (profileId, currentExpiryDate) {
   if (error) {
     alert("Failed to renew: " + error.message);
   } else {
-    openedProfiles.add(profileId); // Biarkan tetap terbuka lepas renew
+    openedProfiles.add(profileId);
     fetchAccountsAndProfiles();
   }
 };
