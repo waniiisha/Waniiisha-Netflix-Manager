@@ -21,10 +21,12 @@
   <main class="main-content">
     <section class="controls-bar">
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search customer, profile, email..." />
+        <input type="text" id="searchInput" placeholder="Search customer, profile, email, tag..." />
       </div>
       <div class="filter-tabs">
         <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="priority">Priority</button>
+        <button class="filter-btn" data-filter="blacklist">Blacklist</button>
         <button class="filter-btn" data-filter="soon">≤ 3 Days</button>
         <button class="filter-btn" data-filter="expired">Expired</button>
         <button class="filter-btn" data-filter="warranty">Warranty</button>
@@ -36,7 +38,6 @@
     </div>
   </main>
 
-  <!-- Modal: Add Netflix Master Account -->
   <div class="modal" id="accountModal">
     <div class="modal-card">
       <h3>Add Netflix Account</h3>
@@ -53,7 +54,6 @@
     </div>
   </div>
 
-  <!-- Modal: Add / Edit Profile -->
   <div class="modal" id="profileModal">
     <div class="modal-card">
       <h3 id="profileModalTitle">Add Customer Profile</h3>
@@ -77,14 +77,24 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="expiryDate">Expiry Date</label>
-          <input type="date" id="expiryDate" required />
+        <div class="form-row">
+          <div class="form-group" style="flex: 1;">
+            <label for="expiryDate">Expiry Date</label>
+            <input type="date" id="expiryDate" required />
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label for="profileTag">Customer Tag</label>
+            <select id="profileTag" class="form-select">
+              <option value="none">Normal (None)</option>
+              <option value="priority">⭐ Priority (3+ Months)</option>
+              <option value="blacklist">🚫 Blacklist</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
           <label for="profileNotes">Notes / Catatan</label>
-          <input type="text" id="profileNotes" placeholder="e.g. Ig: @sarah / Phone / Remarks" />
+          <input type="text" id="profileNotes" placeholder="e.g. Ig: @sarah / Reason blacklist" />
         </div>
 
         <div class="form-group-checkbox">
