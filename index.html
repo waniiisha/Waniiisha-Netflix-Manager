@@ -15,13 +15,12 @@
         <p class="subtitle">Slot & Renewal Tracker</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-primary" id="btnOpenNewAccountModal">+ Add Account</button>
+        <button class="btn btn-primary" onclick="window.openModal('accountModal')">+ Add Account</button>
       </div>
     </div>
   </header>
 
   <main class="main-content">
-    <!-- Filter & Search Controls -->
     <section class="controls-bar">
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="Search by customer, email, or profile..." />
@@ -34,23 +33,22 @@
       </div>
     </section>
 
-    <!-- Accounts Container -->
     <div id="accountsContainer" class="accounts-grid">
       <p class="loading-text">Loading accounts...</p>
     </div>
   </main>
 
-  <!-- Modal: Add / Edit Account -->
+  <!-- Modal: Add Account -->
   <div class="modal" id="accountModal">
     <div class="modal-card">
-      <h3 id="accountModalTitle">Add Netflix Account</h3>
+      <h3>Add Netflix Account</h3>
       <form id="accountForm">
         <div class="form-group">
           <label for="accountEmail">Netflix Master Email</label>
-          <input type="email" id="accountEmail" required placeholder="example@netflix.com" />
+          <input type="email" id="accountEmail" required placeholder="netflix-email@gmail.com" />
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('accountModal')">Cancel</button>
+          <button type="button" class="btn btn-secondary" onclick="window.closeModal('accountModal')">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Account</button>
         </div>
       </form>
@@ -73,7 +71,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="profileName">Profile Name</label>
-            <input type="text" id="profileName" required placeholder="e.g. Slot 1" />
+            <input type="text" id="profileName" required placeholder="e.g. Profile 1" />
           </div>
           <div class="form-group">
             <label for="profilePin">PIN (Optional)</label>
@@ -88,11 +86,11 @@
 
         <div class="form-group-checkbox">
           <input type="checkbox" id="hasWarranty" />
-          <label for="hasWarranty">Warranty Verified (Screenshot received within 24h)</label>
+          <label for="hasWarranty">Warranty Verified (Screenshot within 24h)</label>
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('profileModal')">Cancel</button>
+          <button type="button" class="btn btn-secondary" onclick="window.closeModal('profileModal')">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Profile</button>
         </div>
       </form>
@@ -102,3 +100,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+2
