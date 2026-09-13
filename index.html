@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Netflix Account Manager</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -14,22 +14,20 @@
         <h1>Netflix Manager</h1>
         <p class="subtitle">Slot & Renewal Tracker</p>
       </div>
-      <div class="header-actions">
-        <button class="btn btn-primary" onclick="window.openModal('accountModal')">+ Add Account</button>
-      </div>
+      <button class="btn btn-primary btn-add-acc" onclick="window.openModal('accountModal')">+ Add Account</button>
     </div>
   </header>
 
   <main class="main-content">
     <section class="controls-bar">
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search by customer, email, or profile..." />
+        <input type="text" id="searchInput" placeholder="Search customer, profile, email..." />
       </div>
       <div class="filter-tabs">
         <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="soon">Expiring Soon (≤3d)</button>
+        <button class="filter-btn" data-filter="soon">≤ 3 Days</button>
         <button class="filter-btn" data-filter="expired">Expired</button>
-        <button class="filter-btn" data-filter="warranty">Warranty Active</button>
+        <button class="filter-btn" data-filter="warranty">Warranty</button>
       </div>
     </section>
 
@@ -38,7 +36,7 @@
     </div>
   </main>
 
-  <!-- Modal: Add Account -->
+  <!-- Modal: Add Netflix Master Account -->
   <div class="modal" id="accountModal">
     <div class="modal-card">
       <h3>Add Netflix Account</h3>
@@ -69,13 +67,13 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group">
+          <div class="form-group" style="flex: 2;">
             <label for="profileName">Profile Name</label>
-            <input type="text" id="profileName" required placeholder="e.g. Profile 1" />
+            <input type="text" id="profileName" required placeholder="e.g. Slot 1" />
           </div>
-          <div class="form-group">
-            <label for="profilePin">PIN (Optional)</label>
-            <input type="text" id="profilePin" maxlength="6" placeholder="1234" />
+          <div class="form-group" style="flex: 1;">
+            <label for="profilePin">PIN</label>
+            <input type="text" id="profilePin" maxlength="8" placeholder="1206" />
           </div>
         </div>
 
@@ -84,9 +82,14 @@
           <input type="date" id="expiryDate" required />
         </div>
 
+        <div class="form-group">
+          <label for="profileNotes">Notes / Catatan</label>
+          <input type="text" id="profileNotes" placeholder="e.g. Ig: @sarah / Phone / Remarks" />
+        </div>
+
         <div class="form-group-checkbox">
           <input type="checkbox" id="hasWarranty" />
-          <label for="hasWarranty">Warranty Verified (Screenshot within 24h)</label>
+          <label for="hasWarranty">Warranty Verified (Screenshot received)</label>
         </div>
 
         <div class="modal-actions">
@@ -100,4 +103,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-2
