@@ -1,27 +1,31 @@
+
 const SUPABASE_URL = "https://azlbkyjcqitaknflkqhr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6bGJreWpjcWl0YWtuZmxrcWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDIwNTYsImV4cCI6MjEwNDg3ODA1Nn0.gGR2lEfWh7lAwrIGZUbgUVmIv4mFkgd-rn6oUXZbWSo";
 
-// Initialize Supabase Client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Gunakan supabaseClient untuk elak pertembungan nama dengan library CDN
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let accountsData = [];
 let activeFilter = "all";
 let searchTerm = "";
 
+// Global modal handlers
+window.openModal = function (id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.add("active");
+};
+
+window.closeModal = function (id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.remove("active");
+};
+
 document.addEventListener("DOMContentLoaded", () => {
-  fetchAccountsAndProfiles();
   setupEventListeners();
+  fetchAccountsAndProfiles();
 });
 
 function setupEventListeners() {
-  const addAccountBtn = document.getElementById("btnOpenNewAccountModal");
-  if (addAccountBtn) {
-    addAccountBtn.addEventListener("click", () => {
-      document.getElementById("accountForm").reset();
-      window.openModal("accountModal");
-    });
-  }
-
   const accountForm = document.getElementById("accountForm");
   if (accountForm) {
     accountForm.addEventListener("submit", handleAccountSubmit);
@@ -50,55 +54,51 @@ function setupEventListeners() {
   });
 }
 
-// Global modal helpers
-window.openModal = function (id) {
-  const m = document.getElementById(id);
-  if (m) m.classList.add("active");
-};
-
-window.closeModal = function (id) {
-  const m = document.getElementById(id);
-  if (m) m.classList.remove("active");
-};
-
-// Fetch data from Supabase
+// Fetch all accounts and child profiles
 async function fetchAccountsAndProfiles() {
   const container = document.getElementById("accountsContainer");
-  
-  const { data, error } = await supabase
-    .from("accounts")
-    .select(`
-      id,
-      email,
-      created_at,
-      profiles (
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("accounts")
+      .select(`
         id,
-        customer_name,
-        profile_name,
-        pin,
-        expiry_date,
-        has_warranty
-      )
-    `)
-    .order("created_at", { ascending: false });
+        email,
+        created_at,
+        profiles (
+          id,
+          customer_name,
+          profile_name,
+          pin,
+          expiry_date,
+          has_warranty
+        )
+      `)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Supabase error:", error);
-    if (container) {
-      container.innerHTML = `<p class="loading-text" style="color:#ef4444;">Failed to connect to Supabase: ${error.message}</p>`;
+    if (error) {
+      console.error("Supabase error:", error);
+      if (container) {
+        container.innerHTML = `<p class="loading-text" style="color:#ef4444;">Supabase Error: ${error.message}</p>`;
+      }
+      return;
     }
-    return;
+
+    // Sort profiles by expiry_date ascending
+    accountsData = (data || []).map((acc) => {
+      const sorted = (acc.profiles || []).sort(
+        (a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)
+      );
+      return { ...acc, profiles: sorted };
+    });
+
+    render();
+  } catch (err) {
+    console.error("Fatal fetch error:", err);
+    if (container) {
+      container.innerHTML = `<p class="loading-text" style="color:#ef4444;">System Error: ${err.message}</p>`;
+    }
   }
-
-  // Sort child profiles by expiry_date ascending (closest expiry at top)
-  accountsData = (data || []).map((acc) => {
-    const sorted = (acc.profiles || []).sort(
-      (a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)
-    );
-    return { ...acc, profiles: sorted };
-  });
-
-  render();
 }
 
 function calculateDaysRemaining(expiryDateStr) {
@@ -132,7 +132,7 @@ function render() {
   container.innerHTML = "";
 
   if (accountsData.length === 0) {
-    container.innerHTML = `<p class="loading-text">No Netflix accounts found. Click "+ Add Account" to get started.</p>`;
+    container.innerHTML = `<p class="loading-text">No accounts registered yet. Click <strong>"+ Add Account"</strong> to get started.</p>`;
     return;
   }
 
@@ -199,7 +199,7 @@ function render() {
           <tbody>
             ${
               filteredProfiles.length === 0
-                ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">No customer slots found.</td></tr>`
+                ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">No profiles in this account yet.</td></tr>`
                 : filteredProfiles
                     .map((p) => {
                       const days = calculateDaysRemaining(p.expiry_date);
@@ -237,7 +237,7 @@ function render() {
   });
 
   if (visibleCards === 0 && accountsData.length > 0) {
-    container.innerHTML = `<p class="loading-text">No results matching current filter or search.</p>`;
+    container.innerHTML = `<p class="loading-text">No profiles match the filter criteria.</p>`;
   }
 }
 
@@ -247,19 +247,20 @@ async function handleAccountSubmit(e) {
   const emailInput = document.getElementById("accountEmail");
   const email = emailInput.value.trim();
 
-  const { error } = await supabase.from("accounts").insert([{ email }]);
+  const { error } = await supabaseClient.from("accounts").insert([{ email }]);
   if (error) {
     alert("Failed to add account: " + error.message);
     return;
   }
 
   window.closeModal("accountModal");
+  emailInput.value = "";
   fetchAccountsAndProfiles();
 }
 
 window.deleteAccount = async function (id) {
   if (!confirm("Are you sure you want to delete this account and all linked customer profiles?")) return;
-  const { error } = await supabase.from("accounts").delete().eq("id", id);
+  const { error } = await supabaseClient.from("accounts").delete().eq("id", id);
   if (error) alert("Error deleting account: " + error.message);
   else fetchAccountsAndProfiles();
 };
@@ -275,7 +276,6 @@ window.openAddProfileModal = function (accountId, isFull) {
   document.getElementById("profileAccountId").value = accountId;
   document.getElementById("profileModalTitle").innerText = "Add Customer Profile";
 
-  // Auto set date to +30 days from today
   const nextMonth = new Date();
   nextMonth.setDate(nextMonth.getDate() + 30);
   document.getElementById("expiryDate").value = nextMonth.toISOString().split("T")[0];
@@ -325,9 +325,9 @@ async function handleProfileSubmit(e) {
 
   let res;
   if (id) {
-    res = await supabase.from("profiles").update(payload).eq("id", id);
+    res = await supabaseClient.from("profiles").update(payload).eq("id", id);
   } else {
-    res = await supabase.from("profiles").insert([payload]);
+    res = await supabaseClient.from("profiles").insert([payload]);
   }
 
   if (res.error) {
@@ -344,7 +344,7 @@ window.renewProfile = async function (profileId, currentExpiryDate) {
   current.setDate(current.getDate() + 30);
   const newDate = current.toISOString().split("T")[0];
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from("profiles")
     .update({ expiry_date: newDate })
     .eq("id", profileId);
@@ -355,7 +355,8 @@ window.renewProfile = async function (profileId, currentExpiryDate) {
 
 window.deleteProfile = async function (profileId) {
   if (!confirm("Are you sure you want to remove this profile slot?")) return;
-  const { error } = await supabase.from("profiles").delete().eq("id", profileId);
+  const { error } = await supabaseClient.from("profiles").delete().eq("id", profileId);
   if (error) alert("Error deleting slot: " + error.message);
   else fetchAccountsAndProfiles();
 };
+2
