@@ -1,6 +1,7 @@
 const SUPABASE_URL = "https://azlbkyjcqitaknflkqhr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6bGJreWpjcWl0YWtuZmxrcWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDIwNTYsImV4cCI6MjEwNDg3ODA1Nn0.gGR2lEfWh7lAwrIGZUbgUVmIv4mFkgd-rn6oUXZbWSo";
 
+// Initialize Supabase Client
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let accountsData = [];
@@ -13,18 +14,31 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function setupEventListeners() {
-  document.getElementById("btnOpenNewAccountModal").addEventListener("click", () => {
-    document.getElementById("accountForm").reset();
-    openModal("accountModal");
-  });
+  const addAccountBtn = document.getElementById("btnOpenNewAccountModal");
+  if (addAccountBtn) {
+    addAccountBtn.addEventListener("click", () => {
+      document.getElementById("accountForm").reset();
+      window.openModal("accountModal");
+    });
+  }
 
-  document.getElementById("accountForm").addEventListener("submit", handleAccountSubmit);
-  document.getElementById("profileForm").addEventListener("submit", handleProfileSubmit);
+  const accountForm = document.getElementById("accountForm");
+  if (accountForm) {
+    accountForm.addEventListener("submit", handleAccountSubmit);
+  }
 
-  document.getElementById("searchInput").addEventListener("input", (e) => {
-    searchTerm = e.target.value.toLowerCase();
-    render();
-  });
+  const profileForm = document.getElementById("profileForm");
+  if (profileForm) {
+    profileForm.addEventListener("submit", handleProfileSubmit);
+  }
+
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      searchTerm = e.target.value.toLowerCase();
+      render();
+    });
+  }
 
   document.querySelectorAll(".filter-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -36,8 +50,21 @@ function setupEventListeners() {
   });
 }
 
-// Fetch all accounts along with child profiles
+// Global modal helpers
+window.openModal = function (id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.add("active");
+};
+
+window.closeModal = function (id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.remove("active");
+};
+
+// Fetch data from Supabase
 async function fetchAccountsAndProfiles() {
+  const container = document.getElementById("accountsContainer");
+  
   const { data, error } = await supabase
     .from("accounts")
     .select(`
@@ -56,16 +83,19 @@ async function fetchAccountsAndProfiles() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    alert("Error fetching data: " + error.message);
+    console.error("Supabase error:", error);
+    if (container) {
+      container.innerHTML = `<p class="loading-text" style="color:#ef4444;">Failed to connect to Supabase: ${error.message}</p>`;
+    }
     return;
   }
 
   // Sort child profiles by expiry_date ascending (closest expiry at top)
   accountsData = (data || []).map((acc) => {
-    const sortedProfiles = (acc.profiles || []).sort(
+    const sorted = (acc.profiles || []).sort(
       (a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)
     );
-    return { ...acc, profiles: sortedProfiles };
+    return { ...acc, profiles: sorted };
   });
 
   render();
@@ -98,19 +128,20 @@ function getBadgeDetails(daysRemaining) {
 
 function render() {
   const container = document.getElementById("accountsContainer");
+  if (!container) return;
   container.innerHTML = "";
 
   if (accountsData.length === 0) {
-    container.innerHTML = `<p class="loading-text">No accounts registered yet. Click "+ Add Account" to start.</p>`;
+    container.innerHTML = `<p class="loading-text">No Netflix accounts found. Click "+ Add Account" to get started.</p>`;
     return;
   }
 
+  let visibleCards = 0;
+
   accountsData.forEach((acc) => {
-    // Filter profiles
     const filteredProfiles = acc.profiles.filter((p) => {
       const days = calculateDaysRemaining(p.expiry_date);
 
-      // Search match
       const matchSearch =
         acc.email.toLowerCase().includes(searchTerm) ||
         p.customer_name.toLowerCase().includes(searchTerm) ||
@@ -118,18 +149,17 @@ function render() {
 
       if (!matchSearch) return false;
 
-      // Filter tabs
       if (activeFilter === "soon") return days >= 0 && days <= 3;
       if (activeFilter === "expired") return days < 0;
       if (activeFilter === "warranty") return p.has_warranty === true;
       return true;
     });
 
-    // If searching/filtering and no profiles match, skip account (unless search hits email)
     if (filteredProfiles.length === 0 && (searchTerm || activeFilter !== "all")) {
       return;
     }
 
+    visibleCards++;
     const slotCount = acc.profiles.length;
     const isFull = slotCount >= 5;
 
@@ -145,10 +175,10 @@ function render() {
           </span>
         </div>
         <div>
-          <button class="btn btn-sm btn-primary" onclick="openAddProfileModal('${acc.id}', ${isFull})">
+          <button class="btn btn-sm btn-primary" onclick="window.openAddProfileModal('${acc.id}', ${isFull})">
             + Add Slot
           </button>
-          <button class="btn btn-sm btn-danger" onclick="deleteAccount('${acc.id}')">
+          <button class="btn btn-sm btn-danger" onclick="window.deleteAccount('${acc.id}')">
             Delete Account
           </button>
         </div>
@@ -169,7 +199,7 @@ function render() {
           <tbody>
             ${
               filteredProfiles.length === 0
-                ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No profiles added yet.</td></tr>`
+                ? `<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">No customer slots found.</td></tr>`
                 : filteredProfiles
                     .map((p) => {
                       const days = calculateDaysRemaining(p.expiry_date);
@@ -189,9 +219,9 @@ function render() {
                             }
                           </td>
                           <td class="actions-cell">
-                            <button class="btn btn-sm btn-renew" onclick="renewProfile('${p.id}', '${p.expiry_date}')">+30d</button>
-                            <button class="btn btn-sm btn-edit" onclick="openEditProfileModal('${p.id}')">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteProfile('${p.id}')">✕</button>
+                            <button class="btn btn-sm btn-renew" onclick="window.renewProfile('${p.id}', '${p.expiry_date}')" title="Add 30 days">+30d</button>
+                            <button class="btn btn-sm btn-edit" onclick="window.openEditProfileModal('${p.id}')">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="window.deleteProfile('${p.id}')">✕</button>
                           </td>
                         </tr>
                       `;
@@ -205,31 +235,37 @@ function render() {
 
     container.appendChild(card);
   });
+
+  if (visibleCards === 0 && accountsData.length > 0) {
+    container.innerHTML = `<p class="loading-text">No results matching current filter or search.</p>`;
+  }
 }
 
 // Account actions
 async function handleAccountSubmit(e) {
   e.preventDefault();
-  const email = document.getElementById("accountEmail").value.trim();
+  const emailInput = document.getElementById("accountEmail");
+  const email = emailInput.value.trim();
 
   const { error } = await supabase.from("accounts").insert([{ email }]);
   if (error) {
     alert("Failed to add account: " + error.message);
     return;
   }
-  closeModal("accountModal");
+
+  window.closeModal("accountModal");
   fetchAccountsAndProfiles();
 }
 
-async function deleteAccount(id) {
-  if (!confirm("Are you sure you want to delete this account and all its customer slots?")) return;
+window.deleteAccount = async function (id) {
+  if (!confirm("Are you sure you want to delete this account and all linked customer profiles?")) return;
   const { error } = await supabase.from("accounts").delete().eq("id", id);
-  if (error) alert("Error deleting: " + error.message);
+  if (error) alert("Error deleting account: " + error.message);
   else fetchAccountsAndProfiles();
-}
+};
 
 // Profile actions
-function openAddProfileModal(accountId, isFull) {
+window.openAddProfileModal = function (accountId, isFull) {
   if (isFull) {
     alert("This account already has 5 profiles (maximum slots reached).");
     return;
@@ -239,15 +275,15 @@ function openAddProfileModal(accountId, isFull) {
   document.getElementById("profileAccountId").value = accountId;
   document.getElementById("profileModalTitle").innerText = "Add Customer Profile";
 
-  // Default expiry date to 30 days from today
+  // Auto set date to +30 days from today
   const nextMonth = new Date();
   nextMonth.setDate(nextMonth.getDate() + 30);
   document.getElementById("expiryDate").value = nextMonth.toISOString().split("T")[0];
 
-  openModal("profileModal");
-}
+  window.openModal("profileModal");
+};
 
-function openEditProfileModal(profileId) {
+window.openEditProfileModal = function (profileId) {
   let profileToEdit = null;
   accountsData.forEach((acc) => {
     const found = acc.profiles.find((p) => p.id === profileId);
@@ -265,8 +301,8 @@ function openEditProfileModal(profileId) {
   document.getElementById("hasWarranty").checked = profileToEdit.has_warranty;
 
   document.getElementById("profileModalTitle").innerText = "Edit Customer Profile";
-  openModal("profileModal");
-}
+  window.openModal("profileModal");
+};
 
 async function handleProfileSubmit(e) {
   e.preventDefault();
@@ -299,11 +335,11 @@ async function handleProfileSubmit(e) {
     return;
   }
 
-  closeModal("profileModal");
+  window.closeModal("profileModal");
   fetchAccountsAndProfiles();
 }
 
-async function renewProfile(profileId, currentExpiryDate) {
+window.renewProfile = async function (profileId, currentExpiryDate) {
   const current = new Date(currentExpiryDate);
   current.setDate(current.getDate() + 30);
   const newDate = current.toISOString().split("T")[0];
@@ -315,20 +351,11 @@ async function renewProfile(profileId, currentExpiryDate) {
 
   if (error) alert("Failed to renew: " + error.message);
   else fetchAccountsAndProfiles();
-}
+};
 
-async function deleteProfile(profileId) {
+window.deleteProfile = async function (profileId) {
   if (!confirm("Are you sure you want to remove this profile slot?")) return;
   const { error } = await supabase.from("profiles").delete().eq("id", profileId);
   if (error) alert("Error deleting slot: " + error.message);
   else fetchAccountsAndProfiles();
-}
-
-function openModal(id) {
-  document.getElementById(id).classList.add("active");
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove("active");
-}
-  a
+};
