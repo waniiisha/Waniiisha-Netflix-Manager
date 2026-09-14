@@ -19,17 +19,32 @@
   </header>
 
   <main class="main-content">
+    <!-- Live Stats Bar -->
+    <section class="stats-bar">
+      <div class="stat-pill">
+        <span class="stat-label">Total Accounts:</span>
+        <strong id="statTotalAccounts" class="stat-value">0</strong>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Total Slots:</span>
+        <strong id="statTotalSlots" class="stat-value">0 / 0</strong>
+      </div>
+    </section>
+
+    <!-- Search & Category Dropdown Bar -->
     <section class="controls-bar">
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search customer, profile, email, tag..." />
+        <input type="text" id="searchInput" placeholder="Search customer, profile, email..." />
       </div>
-      <div class="filter-tabs">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="priority">Priority</button>
-        <button class="filter-btn" data-filter="blacklist">Blacklist</button>
-        <button class="filter-btn" data-filter="soon">≤ 3 Days</button>
-        <button class="filter-btn" data-filter="expired">Expired</button>
-        <button class="filter-btn" data-filter="warranty">Warranty</button>
+      <div class="filter-dropdown-box">
+        <select id="categoryFilter" class="form-select filter-select">
+          <option value="all">📁 All Categories</option>
+          <option value="priority">⭐ Priority</option>
+          <option value="blacklist">🚫 Blacklist</option>
+          <option value="soon">⚠️ Expiring Soon (≤3d)</option>
+          <option value="expired">❌ Expired</option>
+          <option value="warranty">🛡️ Warranty Active</option>
+        </select>
       </div>
     </section>
 
@@ -38,6 +53,7 @@
     </div>
   </main>
 
+  <!-- Modal: Add Netflix Account -->
   <div class="modal" id="accountModal">
     <div class="modal-card">
       <h3>Add Netflix Account</h3>
@@ -54,6 +70,7 @@
     </div>
   </div>
 
+  <!-- Modal: Add / Edit Profile -->
   <div class="modal" id="profileModal">
     <div class="modal-card">
       <h3 id="profileModalTitle">Add Customer Profile</h3>
@@ -94,7 +111,7 @@
 
         <div class="form-group">
           <label for="profileNotes">Notes / Catatan</label>
-          <input type="text" id="profileNotes" placeholder="e.g. Ig: @sarah / Reason blacklist" />
+          <input type="text" id="profileNotes" placeholder="e.g. Ig: @sarah / Remarks" />
         </div>
 
         <div class="form-group-checkbox">
