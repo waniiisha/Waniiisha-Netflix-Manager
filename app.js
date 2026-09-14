@@ -42,14 +42,13 @@ function setupEventListeners() {
     });
   }
 
-  document.querySelectorAll(".filter-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
-      e.target.classList.add("active");
-      activeFilter = e.target.getAttribute("data-filter");
+  const categoryFilter = document.getElementById("categoryFilter");
+  if (categoryFilter) {
+    categoryFilter.addEventListener("change", (e) => {
+      activeFilter = e.target.value;
       render();
     });
-  });
+  }
 }
 
 async function fetchAccountsAndProfiles() {
@@ -90,6 +89,7 @@ async function fetchAccountsAndProfiles() {
       return { ...acc, profiles: sorted };
     });
 
+    updateGlobalStats();
     render();
   } catch (err) {
     console.error("Fatal error:", err);
@@ -97,6 +97,18 @@ async function fetchAccountsAndProfiles() {
       container.innerHTML = `<p class="loading-text" style="color:#ef4444;">Error: ${err.message}</p>`;
     }
   }
+}
+
+function updateGlobalStats() {
+  const totalAccounts = accountsData.length;
+  const totalMaxSlots = totalAccounts * 5;
+  const totalUsedSlots = accountsData.reduce((acc, curr) => acc + (curr.profiles ? curr.profiles.length : 0), 0);
+
+  const accEl = document.getElementById("statTotalAccounts");
+  const slotEl = document.getElementById("statTotalSlots");
+
+  if (accEl) accEl.innerText = totalAccounts;
+  if (slotEl) slotEl.innerText = `${totalUsedSlots} / ${totalMaxSlots}`;
 }
 
 function calculateDaysRemaining(expiryDateStr) {
@@ -202,7 +214,7 @@ function render() {
       <div class="profile-list">
         ${
           filteredProfiles.length === 0
-            ? `<div style="text-align:center; color: var(--text-muted); padding: 1.25rem; font-size: 0.85rem;">No profiles in this account yet.</div>`
+            ? `<div style="text-align:center; color: var(--text-muted); padding: 1.25rem; font-size: 0.85rem;">No profiles match filter.</div>`
             : filteredProfiles
                 .map((p) => {
                   const days = calculateDaysRemaining(p.expiry_date);
